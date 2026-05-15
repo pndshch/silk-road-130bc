@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>シルクロードの隊商 紀元前130年 — Silk Road Caravan 130 BC</title>
+<meta name="description" content="張騫が切り拓いたシルクロードを隊商で旅し、絹・翡翠・香辛料を交易する歴史シミュレーションゲーム。長安からローマへ、8都市を結ぶ古代最大の交易路を体験せよ。">
+<meta property="og:title" content="シルクロードの隊商 紀元前130年 — Silk Road Caravan">
+<meta property="og:description" content="張騫が切り拓いたシルクロードを隊商で旅し、交易する歴史ゲーム。長安→ローマ、8都市。">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;touch-action:manipulation}
+body{background:#1a0e05;color:#f0e6d3;font-family:'Helvetica Neue',Arial,sans-serif}
+
+/* ── Language toggle ── */
+.lang-sw{position:fixed;top:6px;right:6px;display:flex;gap:2px;background:rgba(0,0,0,.7);border-radius:6px;padding:2px;z-index:200}
+.lang-sw button{background:transparent;border:none;color:#a09080;font-size:11px;font-weight:700;padding:4px 8px;border-radius:4px;cursor:pointer}
+.lang-sw button.active{background:#c4956a;color:#1a0e05}
+
+/* ── Title screen ── */
+#titleScreen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+background:linear-gradient(180deg,#0d0805 0%,#2a1a0a 40%,#4a2a10 70%,#1a0e05 100%);z-index:100;text-align:center;padding:20px}
+#titleScreen h1{font-size:clamp(28px,6vw,48px);font-weight:900;color:#c4956a;text-shadow:0 2px 20px rgba(196,149,106,.4);margin-bottom:8px;line-height:1.2}
+#titleScreen .subtitle{font-size:clamp(13px,3vw,18px);color:#8a7a6a;margin-bottom:6px}
+#titleScreen .year-label{font-size:clamp(20px,4vw,32px);font-weight:800;color:#d4a574;margin-bottom:24px}
+#titleScreen .intro{max-width:500px;font-size:clamp(12px,2.5vw,15px);color:#a09080;line-height:1.7;margin-bottom:32px}
+#titleScreen .start-btn{background:linear-gradient(135deg,#c4956a,#8a6040);border:none;color:#fff;font-size:18px;font-weight:700;
+padding:14px 48px;border-radius:12px;cursor:pointer;box-shadow:0 4px 20px rgba(196,149,106,.3);transition:transform .15s,box-shadow .15s}
+#titleScreen .start-btn:hover{transform:translateY(-2px);box-shadow:0 6px 30px rgba(196,149,106,.5)}
+.camel-art{font-size:clamp(40px,10vw,80px);margin-bottom:16px;filter:drop-shadow(0 4px 12px rgba(0,0,0,.5))}
+
+/* ── Game screen ── */
+#gameScreen{position:absolute;inset:0;display:none;flex-direction:column}
+
+/* Top bar */
+.top-bar{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:#120a04;border-bottom:1px solid #3a2a1a;flex-shrink:0;min-height:40px;gap:4px;flex-wrap:nowrap;overflow-x:auto}
+@media(max-width:480px){.top-bar{padding:4px 8px;gap:3px}.res{font-size:11px !important}}
+.res{display:flex;align-items:center;gap:4px;font-size:clamp(11px,2.5vw,14px);font-weight:600;white-space:nowrap}
+.res .icon{font-size:clamp(14px,3vw,18px)}
+.res .val{color:#d4a574}
+
+/* Map area */
+.map-area{flex:1;position:relative;overflow:hidden;background:linear-gradient(180deg,#1a1408 0%,#2a1a0a 30%,#3a2510 60%,#2a1a0a 100%)}
+.map-canvas{width:100%;height:100%}
+
+/* City panel (bottom sheet) */
+.city-panel{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(180deg,#1a0e05ee,#120a04);
+border-top:2px solid #c4956a;padding:12px;max-height:70vh;overflow-y:auto;display:none;z-index:50}
+.city-panel.show{display:block}
+.city-name{font-size:clamp(18px,4vw,24px);font-weight:800;color:#c4956a;margin-bottom:2px}
+.city-desc{font-size:clamp(11px,2.5vw,13px);color:#a09080;line-height:1.5;margin-bottom:10px}
+.history-box{background:#2a1a0a;border:1px solid #3a2a1a;border-radius:8px;padding:10px;margin-bottom:10px;font-size:clamp(11px,2.5vw,13px);color:#c4956a;line-height:1.6}
+.history-box .hist-title{font-weight:700;margin-bottom:4px;font-size:clamp(12px,2.5vw,14px)}
+
+/* Trade grid */
+.trade-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:12px}
+.trade-item{background:#2a1a0a;border:1px solid #3a2a1a;border-radius:8px;padding:8px;text-align:center}
+.trade-item .t-name{font-size:clamp(12px,2.5vw,14px);font-weight:700;color:#d4a574;margin-bottom:4px}
+.trade-item .t-price{font-size:clamp(11px,2.5vw,13px);color:#8a7a6a;margin-bottom:6px}
+.trade-item .t-own{font-size:11px;color:#6a5a4a;margin-bottom:6px}
+.trade-btns{display:flex;gap:4px;justify-content:center}
+.trade-btns button{flex:1;padding:5px 0;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;transition:opacity .15s}
+.buy-btn{background:#4a7a3a;color:#fff}
+.sell-btn{background:#7a3a3a;color:#fff}
+.buy-btn:disabled,.sell-btn:disabled{opacity:.3;cursor:default}
+
+/* Travel button */
+.travel-btn{width:100%;padding:12px;background:linear-gradient(135deg,#c4956a,#8a6040);border:none;color:#fff;
+font-size:clamp(14px,3vw,16px);font-weight:700;border-radius:10px;cursor:pointer;margin-top:4px;transition:opacity .15s}
+.travel-btn:disabled{opacity:.4;cursor:default}
+
+/* Close panel */
+.close-panel{position:absolute;top:8px;right:12px;background:none;border:none;color:#8a7a6a;font-size:24px;cursor:pointer;z-index:51}
+
+/* Event overlay */
+#eventOverlay{position:absolute;inset:0;background:rgba(10,5,2,.92);display:none;align-items:center;justify-content:center;z-index:80;padding:20px}
+#eventOverlay.show{display:flex}
+.event-card{background:#2a1a0a;border:2px solid #c4956a;border-radius:16px;padding:24px;max-width:400px;width:100%;text-align:center}
+.event-card .ev-icon{font-size:48px;margin-bottom:12px}
+.event-card .ev-title{font-size:clamp(16px,4vw,22px);font-weight:800;color:#c4956a;margin-bottom:8px}
+.event-card .ev-desc{font-size:clamp(12px,2.5vw,14px);color:#a09080;line-height:1.6;margin-bottom:16px}
+.event-card .ev-effect{font-size:clamp(12px,2.5vw,14px);font-weight:700;padding:8px;border-radius:8px;margin-bottom:16px}
+.ev-good{background:#1a3a1a;color:#6aaa5a;border:1px solid #3a5a3a}
+.ev-bad{background:#3a1a1a;color:#aa5a5a;border:1px solid #5a3a3a}
+.ev-neutral{background:#2a2a1a;color:#aaaa5a;border:1px solid #4a4a3a}
+.event-card .ev-btn{padding:10px 32px;background:linear-gradient(135deg,#c4956a,#8a6040);border:none;color:#fff;
+font-size:15px;font-weight:700;border-radius:10px;cursor:pointer}
+.ev-choices{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.ev-choice-btn{padding:10px 16px;background:#3a2a1a;border:1px solid #5a4a3a;color:#d4a574;font-size:clamp(12px,2.5vw,14px);
+font-weight:600;border-radius:8px;cursor:pointer;text-align:left;transition:background .15s}
+.ev-choice-btn:hover{background:#4a3a2a}
+
+/* Victory / Game Over */
+#endScreen{position:absolute;inset:0;background:rgba(10,5,2,.95);display:none;align-items:center;justify-content:center;z-index:90;padding:20px}
+#endScreen.show{display:flex}
+.end-card{background:linear-gradient(135deg,#2a1a0a,#1a0e05);border:2px solid #c4956a;border-radius:16px;padding:32px;
+max-width:420px;width:100%;text-align:center}
+.end-card h2{font-size:clamp(22px,5vw,32px);font-weight:900;color:#c4956a;margin-bottom:8px}
+.end-card .end-icon{font-size:64px;margin-bottom:16px}
+.end-card .end-stats{text-align:left;margin:16px 0;font-size:14px;color:#a09080;line-height:1.8}
+.end-card .end-stats strong{color:#d4a574}
+.end-card .retry-btn{padding:12px 40px;background:linear-gradient(135deg,#c4956a,#8a6040);border:none;color:#fff;
+font-size:16px;font-weight:700;border-radius:10px;cursor:pointer;margin-top:8px}
+
+/* Traveling animation overlay */
+#travelOverlay{position:absolute;inset:0;background:rgba(10,5,2,.88);display:none;align-items:center;justify-content:center;
+z-index:70;flex-direction:column;gap:16px}
+#travelOverlay.show{display:flex}
+.travel-text{font-size:clamp(14px,3vw,18px);color:#c4956a;font-weight:700}
+.travel-progress{width:200px;height:6px;background:#2a1a0a;border-radius:3px;overflow:hidden}
+.travel-progress-bar{height:100%;background:#c4956a;width:0%;transition:width 1.5s ease-in-out;border-radius:3px}
+.travel-camel{font-size:48px;animation:camelWalk 1s infinite}
+@keyframes camelWalk{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+
+/* Scrollbar */
+.city-panel::-webkit-scrollbar{width:4px}
+.city-panel::-webkit-scrollbar-track{background:#1a0e05}
+.city-panel::-webkit-scrollbar-thumb{background:#3a2a1a;border-radius:2px}
+
+/* Journey progress bar at top of map */
+.journey-bar{position:absolute;top:0;left:0;right:0;height:3px;background:#1a0e05;z-index:10}
+.journey-fill{height:100%;background:linear-gradient(90deg,#c4956a,#d4a574);transition:width .5s}
+</style>
+</head>
+<body>
+
+<div class="lang-sw">
+<button class="active" onclick="setLang('ja')">JP</button>
+<button onclick="setLang('en')">EN</button>
+</div>
+
+<!-- TITLE SCREEN -->
+<div id="titleScreen">
+<div class="camel-art">🐪</div>
+<h1 id="mainTitle">シルクロードの隊商</h1>
+<div class="subtitle" id="mainSub">Silk Road Caravan</div>
+<div class="year-label">紀元前130年 / 130 BC</div>
+<div class="intro" id="mainIntro">
+紀元前130年、漢の武帝の命を受けた<strong>張騫</strong>が西域への道を切り拓いた。
+絹・翡翠・香辛料——東西の宝を積んだ隊商が砂漠と山脈を越え、
+<strong>長安からローマ</strong>まで約7000kmの古代最大の交易路を旅する。
+砂嵐、盗賊、オアシスでの出会い。交易で富を築き、無事にローマへ辿り着けるか？
+</div>
+<button class="start-btn" id="startBtn" onclick="startGame()">▶ 旅に出る</button>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="gameScreen">
+<div class="top-bar">
+  <div class="res"><span class="icon">💰</span><span class="val" id="goldVal">500</span></div>
+  <div class="res"><span class="icon">💧</span><span class="val" id="waterVal">100</span></div>
+  <div class="res"><span class="icon">❤️</span><span class="val" id="healthVal">100</span></div>
+  <div class="res"><span class="icon">🐪</span><span class="val" id="camelVal">5</span></div>
+  <div class="res"><span class="icon">📍</span><span class="val" id="cityLabel">長安</span></div>
+</div>
+
+<div class="map-area">
+  <canvas class="map-canvas" id="mapCanvas"></canvas>
+  <div class="journey-bar"><div class="journey-fill" id="journeyFill"></div></div>
+</div>
+
+<div class="city-panel" id="cityPanel">
+  <button class="close-panel" onclick="closePanel()">&times;</button>
+  <div class="city-name" id="panelCityName"></div>
+  <div class="city-desc" id="panelCityDesc"></div>
+  <div class="history-box" id="panelHistory"></div>
+  <div class="trade-grid" id="tradeGrid"></div>
+  <div id="supplyShop"></div>
+  <button class="travel-btn" id="travelBtn" onclick="travelToNext()">次の都市へ出発 →</button>
+</div>
+
+<div id="eventOverlay"><div class="event-card" id="eventCard"></div></div>
+<div id="travelOverlay">
+  <div class="travel-camel">🐪🐫🐪</div>
+  <div class="travel-text" id="travelText">砂漠を進んでいます…</div>
+  <div class="travel-progress"><div class="travel-progress-bar" id="travelBar"></div></div>
+</div>
+</div>
+
+<div id="endScreen"><div class="end-card" id="endCard"></div></div>
+
+<script>
+const L = {
+ja: {
+  title: "シルクロードの隊商",
+  sub: "Silk Road Caravan",
+  intro: '紀元前130年、漢の武帝の命を受けた<strong>張騫</strong>が西域への道を切り拓いた。絹・翡翠・香辛料——東西の宝を積んだ隊商が砂漠と山脈を越え、<strong>長安からローマ</strong>まで約7000kmの古代最大の交易路を旅する。砂嵐、盗賊、オアシスでの出会い。交易で富を築き、無事にローマへ辿り着けるか？',
+  start: "▶ 旅に出る",
+  buy: "買", sell: "売",
+  own: "所持: ", price: "価格: ",
+  nextCity: "次の都市へ出発 →",
+  traveling: "砂漠を進んでいます…",
+  ok: "了解",
+  water: "水を補給", camels: "ラクダを購入",
+  waterCost: "水 +50 → 💰30", camelCost: "ラクダ +1 → 💰80",
+  victory: "ローマ到達！",
+  victoryDesc: "古代最大の交易路を踏破した！",
+  gameover: "旅は終わった…",
+  goGold: "所持金: ", goCamels: "ラクダ: ", goWater: "水: ", goHealth: "体力: ",
+  goReason: "敗因: ",
+  retry: "もう一度旅に出る",
+  daysLabel: "旅の日数: ",
+  profitLabel: "利益: ",
+  citiesLabel: "訪問都市: ",
+  finalGold: "最終所持金: ",
+  rank: "商人ランク: ",
+  ranks: ["旅の初心者","シルクの行商人","砂漠の商人","隊商の長","伝説の大商人"],
+  histTitle: "📜 歴史メモ",
+  supplyTitle: "🏪 補給所",
+},
+en: {
+  title: "Silk Road Caravan",
+  sub: "シルクロードの隊商",
+  intro: 'In 130 BC, <strong>Zhang Qian</strong>, envoy of Emperor Wu of Han, blazed a trail to the Western Regions. Carrying silk, jade, and spices, your caravan crosses deserts and mountains on the <strong>7,000 km route from Chang\'an to Rome</strong>—the greatest trade road of the ancient world. Sandstorms, bandits, and chance encounters at oases await. Can you build a fortune and reach Rome alive?',
+  start: "▶ Set Out",
+  buy: "Buy", sell: "Sell",
+  own: "Own: ", price: "Price: ",
+  nextCity: "Travel to Next City →",
+  traveling: "Crossing the desert…",
+  ok: "OK",
+  water: "Resupply water", camels: "Buy camel",
+  waterCost: "Water +50 → 💰30", camelCost: "Camel +1 → 💰80",
+  victory: "You reached Rome!",
+  victoryDesc: "You conquered the greatest trade route of the ancient world!",
+  gameover: "The journey ends…",
+  goGold: "Gold: ", goCamels: "Camels: ", goWater: "Water: ", goHealth: "Health: ",
+  goReason: "Cause: ",
+  retry: "Try Again",
+  daysLabel: "Days traveled: ",
+  profitLabel: "Profit: ",
+  citiesLabel: "Cities visited: ",
+  finalGold: "Final gold: ",
+  rank: "Merchant rank: ",
+  ranks: ["Novice Traveler","Silk Peddler","Desert Trader","Caravan Master","Legendary Merchant"],
+  histTitle: "📜 Historical Note",
+  supplyTitle: "🏪 Supplies",
+}};
+
+let lang = 'ja';
+function t(k){ return L[lang][k] || L.ja[k] || k; }
+function setLang(l){
+  lang = l;
+  document.querySelectorAll('.lang-sw button').forEach(b => b.classList.toggle('active', b.textContent === (l==='ja'?'JP':'EN')));
+  updateUI();
+}
+
+const GOODS = [
+  {id:'silk',    ja:'絹',     en:'Silk',    emoji:'🧵', base:40},
+  {id:'jade',    ja:'翡翠',   en:'Jade',    emoji:'💎', base:60},
+  {id:'spice',   ja:'香辛料', en:'Spices',  emoji:'🌶️', base:30},
+  {id:'tea',     ja:'茶',     en:'Tea',     emoji:'🍵', base:25},
+  {id:'horses',  ja:'馬',     en:'Horses',  emoji:'🐴', base:80},
+  {id:'gold_ore',ja:'金',     en:'Gold ore',emoji:'🪙', base:100},
+  {id:'lapis',   ja:'瑠璃',   en:'Lapis L.',emoji:'🔵', base:55},
+  {id:'glass',   ja:'ガラス', en:'Glass',   emoji:'🫧', base:45},
+];
+
+const CITIES = [
+  {id:'changan', ja:'長安', en:"Chang'an", x:.08, y:.48,
+   descJa:'漢帝国の首都。人口100万を超える世界最大級の都市。張騫はここから西域への旅に出発した。',
+   descEn:"Capital of the Han Empire. One of the world's largest cities with over 1 million people. Zhang Qian departed from here on his mission west.",
+   histJa:'紀元前139年、張騫は武帝の命で大月氏国との同盟を目指し西域に旅立った。匈奴に捕らえられ10年間拘留されたが脱出し、ついにフェルガナ、ソグディアナに到達。この旅が東西交易路「シルクロード」の起源となった。',
+   histEn:'In 139 BC, Zhang Qian set out on Emperor Wu\'s orders to seek an alliance with the Yuezhi against the Xiongnu. Captured and held for 10 years, he escaped and reached Fergana and Sogdiana. His journey opened what we now call the Silk Road.',
+   priceMod:{silk:0.6, jade:0.7, tea:0.5, spice:1.8, horses:1.5, glass:2.0, lapis:1.8, gold_ore:1.2},
+   supply:true},
+  {id:'dunhuang', ja:'敦煌', en:'Dunhuang', x:.20, y:.38,
+   descJa:'砂漠の入口にある最後のオアシス都市。西へ向かう者はここで水と食料を調達した。後に莫高窟の仏教壁画で知られるようになる。',
+   descEn:'The last oasis city before the desert. Travelers heading west stocked up on water and provisions here. Later famous for the Mogao Caves\' Buddhist murals.',
+   histJa:'敦煌は「砂漠の玄関」と呼ばれ、シルクロードの南道・北道の分岐点だった。紀元前111年に漢の郡が設置され、玉門関と陽関の二つの関所が砂漠への入口を守った。何千もの仏教壁画を持つ莫高窟は4世紀に開窟された。',
+   histEn:'Called the "Gateway to the Desert," Dunhuang was where the Silk Road split into northern and southern routes. The Han established a commandery here in 111 BC with two famous passes: Yumen and Yang. The Mogao Caves, with thousands of Buddhist murals, were carved starting in the 4th century.',
+   priceMod:{silk:0.8, jade:0.8, tea:0.7, spice:1.4, horses:1.2, glass:1.8, lapis:1.5, gold_ore:1.1},
+   supply:true},
+  {id:'kashgar', ja:'カシュガル', en:'Kashgar', x:.30, y:.35,
+   descJa:'タクラマカン砂漠の西端、天山山脈の麓のオアシス都市。東西南北の交易路が交差する中央アジア最大の市場。',
+   descEn:'An oasis city at the western edge of the Taklamakan Desert, at the foot of the Tian Shan mountains. Central Asia\'s greatest market where trade routes intersected.',
+   histJa:'カシュガルは漢代には「疏勒」と呼ばれ、シルクロードの南道と北道が再合流する要衝だった。ここでは西方からのギリシャ文化、インドの仏教、ペルシャの工芸が混じり合い、独特の多文化社会が生まれた。バザールでは何十もの言語が飛び交っていた。',
+   histEn:'Known as "Shule" in Han times, Kashgar was where the Silk Road\'s northern and southern routes reconnected. Greek culture from the west, Indian Buddhism, and Persian crafts mixed here, creating a uniquely multicultural society. Dozens of languages filled its bazaars.',
+   priceMod:{silk:1.0, jade:1.0, tea:1.2, spice:1.0, horses:0.7, glass:1.3, lapis:0.8, gold_ore:1.0},
+   supply:true},
+  {id:'samarkand', ja:'サマルカンド', en:'Samarkand', x:.42, y:.30,
+   descJa:'「東方の真珠」と称されたソグド人の都。アレクサンドロス大王も征服したこの都市は、シルクロード随一の交易拠点だった。',
+   descEn:'"The Pearl of the East," capital of the Sogdians. Conquered by Alexander the Great, it was the Silk Road\'s greatest trading hub.',
+   histJa:'ソグド人は古代の「国際商人」で、中国語・ペルシャ語・テュルク語を操りシルクロード交易を支配した。紀元前329年にアレクサンドロス大王が征服した際、「聞いていたよりも美しい」と言ったと伝わる。ソグド商人のネットワークは長安からビザンティウムまで広がっていた。',
+   histEn:'The Sogdians were the ancient world\'s "international merchants," speaking Chinese, Persian, and Turkic to dominate Silk Road trade. Alexander the Great, conquering it in 329 BC, reportedly said it was "more beautiful than I imagined." Sogdian merchant networks stretched from Chang\'an to Byzantium.',
+   priceMod:{silk:1.2, jade:1.1, tea:1.5, spice:0.8, horses:0.6, glass:1.0, lapis:0.7, gold_ore:0.9},
+   supply:true},
+  {id:'merv', ja:'メルヴ', en:'Merv', x:.52, y:.38,
+   descJa:'カラクム砂漠の中のオアシス都市。古代名マルギアナ。一時は世界最大の都市とも言われた中央アジアの真珠。',
+   descEn:'An oasis city in the Karakum Desert. Known as Margiana in antiquity. Once said to be the world\'s largest city—the pearl of Central Asia.',
+   histJa:'メルヴは紀元前6世紀のアケメネス朝ペルシャ時代から栄え、中央アジア最大のオアシスだった。アレクサンドロス大王は「アレクサンドリア・マルギアナ」と改称した。東西交易の中継点として、ここで中国の絹がローマの金貨と交換された。12世紀には人口100万を超え、世界最大の都市だったとも言われる。',
+   histEn:'Merv flourished from the Achaemenid Persian era (6th century BC) as Central Asia\'s greatest oasis. Alexander the Great renamed it "Alexandria Margiana." As a Silk Road relay point, Chinese silk was exchanged for Roman gold coins here. By the 12th century, its population exceeded 1 million.',
+   priceMod:{silk:1.4, jade:1.2, tea:1.6, spice:0.7, horses:0.8, glass:0.9, lapis:0.6, gold_ore:0.85},
+   supply:true},
+  {id:'ctesiphon', ja:'クテシフォン', en:'Ctesiphon', x:.62, y:.48,
+   descJa:'ティグリス川沿いのパルティア帝国の首都。後にササン朝ペルシャの首都にもなった。東西文明の十字路。',
+   descEn:'Capital of the Parthian Empire on the Tigris. Later capital of Sassanid Persia. A crossroads of Eastern and Western civilizations.',
+   histJa:'パルティア帝国（紀元前247年〜224年）はシルクロード交易で莫大な富を得た。ローマと漢の間に位置する「仲介者」として、絹の値段を何倍にも吊り上げた。ローマ人は絹の原産地を知らず、「セリカ（絹の国）」と呼んだ。パルティアの騎射戦術「パルティアンショット」は後退しながら矢を放つ戦法で有名。',
+   histEn:'The Parthian Empire (247 BC–224 AD) grew immensely wealthy as Silk Road middlemen. Positioned between Rome and Han China, they marked up silk prices enormously. Romans didn\'t know where silk came from, calling its source "Serica" (Land of Silk). The Parthian shot—firing arrows while retreating on horseback—was a feared military tactic.',
+   priceMod:{silk:1.6, jade:1.3, tea:1.8, spice:0.6, horses:1.0, glass:0.7, lapis:0.9, gold_ore:0.8},
+   supply:true},
+  {id:'antioch', ja:'アンティオキア', en:'Antioch', x:.72, y:.42,
+   descJa:'ローマ帝国第三の大都市。地中海東岸の交易の要衝。シルクロードの西端に近く、東方の珍品が集まった。',
+   descEn:'Third-largest city of the Roman Empire. A key trading port on the eastern Mediterranean coast, near the western end of the Silk Road.',
+   histJa:'アンティオキアはセレウコス朝の首都として紀元前300年に建設された。ローマ帝国時代にはローマ、アレクサンドリアに次ぐ第三の大都市となった。東方の絹や香辛料がここに集まり、地中海経由でローマに送られた。ローマ元老院は「絹の浪費」を嘆き、何度も絹の輸入制限を試みたが失敗した。',
+   histEn:'Founded as Seleucid capital in 300 BC, Antioch became Rome\'s third-largest city. Eastern silk and spices gathered here before shipping to Rome via the Mediterranean. The Roman Senate lamented "silk extravagance" and repeatedly tried to restrict silk imports—unsuccessfully.',
+   priceMod:{silk:1.8, jade:1.5, tea:2.0, spice:0.5, horses:1.3, glass:0.5, lapis:1.0, gold_ore:0.75},
+   supply:true},
+  {id:'rome', ja:'ローマ', en:'Rome', x:.88, y:.45,
+   descJa:'永遠の都、ローマ帝国の首都。シルクロードの終着点。東方の絹は金と同じ重さで取引された。',
+   descEn:'The Eternal City, capital of the Roman Empire. The Silk Road\'s western terminus. Eastern silk was traded at its weight in gold.',
+   histJa:'ローマでは中国の絹が「金と同じ重さ」で取引された。紀元前53年、カルラエの戦いでパルティア軍が掲げた鮮やかな軍旗を見たローマ兵が初めて絹を目にしたとされる。絹への熱狂はローマ経済を圧迫し、プリニウスは「年間1億セステルティウスが東方に流出している」と嘆いた。しかしローマ市民の絹への欲望は止められなかった。',
+   histEn:'In Rome, Chinese silk was traded "at its weight in gold." Roman soldiers reportedly first saw silk in 53 BC at the Battle of Carrhae, when Parthian troops unfurled brilliant silk banners. The silk craze drained Rome\'s economy—Pliny lamented that 100 million sesterces flowed east annually. But Romans\' desire for silk could not be stopped.',
+   priceMod:{silk:2.2, jade:1.8, tea:2.5, spice:0.4, horses:1.4, glass:0.4, lapis:1.2, gold_ore:0.7},
+   supply:false},
+];
+
+const EVENTS_JA = [
+  {icon:'🌪️',title:'砂嵐',desc:'激しい砂嵐が隊商を襲う！ラクダが怯え、水が減る。',
+   choices:[
+     {text:'嵐の中を強行突破する',effect:{water:-20,health:-15},result:'砂に打たれながら進んだ。水と体力を失った。'},
+     {text:'テントを張って嵐をやり過ごす',effect:{water:-10,days:2},result:'2日間足止めされたが、被害は最小限だった。'},
+   ]},
+  {icon:'🗡️',title:'盗賊団',desc:'武装した盗賊団が行く手に現れた！',
+   choices:[
+     {text:'金を渡して通してもらう',effect:{gold:-80},result:'金80を渡して無事に通過した。'},
+     {text:'ラクダを走らせて逃げる',effect:{health:-20,camels:-1},result:'必死に逃げたが、ラクダ1頭と体力を失った。'},
+     {text:'交渉して交易品を少し渡す',effect:{randomLoss:true},result:'交易品の一部を渡して穏便に済ませた。'},
+   ]},
+  {icon:'🏕️',title:'隊商宿（キャラバンサライ）',desc:'旅人を迎え入れるキャラバンサライを見つけた。温かい食事とベッドがある。',
+   choices:[
+     {text:'一泊して休む（💰20）',effect:{gold:-20,health:25,water:15},result:'しっかり休んで体力と水を回復した。'},
+     {text:'素通りして先を急ぐ',effect:{},result:'時間を節約して先に進んだ。'},
+   ]},
+  {icon:'💀',title:'砂漠の猛暑',desc:'灼熱の砂漠で気温が50度を超える。水の消費が激しい。',
+   choices:[
+     {text:'夜間に移動する',effect:{water:-15},result:'涼しい夜に移動して水の消費を抑えた。'},
+     {text:'昼間も構わず進む',effect:{water:-30,health:-10},result:'猛暑の中を進み、水と体力を大量に失った。'},
+   ]},
+  {icon:'🕌',title:'商人との出会い',desc:'友好的な商人の一団と出会った。交易の情報を教えてくれる。',
+   choices:[
+     {text:'一緒に旅をする',effect:{health:10,water:10},result:'仲間が増えて安心感があり、水も分けてもらえた。'},
+     {text:'情報だけもらって別れる',effect:{gold:30},result:'次の都市での相場情報を得て、30金相当の価値があった。'},
+   ]},
+  {icon:'🏔️',title:'山岳の峠',desc:'険しい山道を越えなければならない。パミール高原の標高4000m。',
+   choices:[
+     {text:'主要な峠道を行く（安全だが遠回り）',effect:{water:-15,days:1},result:'安全に峠を越えたが、水と時間を消費した。'},
+     {text:'近道を試みる',effect:{health:-25,camels:-1},result:'危険な近道でラクダ1頭を失い、体力も消耗した。'},
+   ]},
+  {icon:'🐺',title:'狼の群れ',desc:'夜、キャンプの周りに狼の群れが現れた。ラクダが怯えている。',
+   choices:[
+     {text:'火を焚いて追い払う',effect:{water:-5},result:'燃料に水を使い、火を大きくして狼を追い払った。'},
+     {text:'夜通し見張りをする',effect:{health:-15},result:'一睡もできず体力が減ったが、ラクダは無事だった。'},
+   ]},
+  {icon:'🌊',title:'オアシス発見',desc:'砂漠の中に美しいオアシスを発見！ナツメヤシが生い茂っている。',
+   choices:[
+     {text:'ゆっくり休息を取る',effect:{water:40,health:20},result:'水を補給し、木陰で休んで体力を回復した。'},
+     {text:'水だけ補給して先を急ぐ',effect:{water:25},result:'素早く水を補給して出発した。'},
+   ]},
+  {icon:'🎭',title:'シルクロードの旅芸人',desc:'旅芸人の一座が曲芸と音楽を披露している。各地の噂話も聞ける。',
+   choices:[
+     {text:'ショーを楽しむ（💰15）',effect:{gold:-15,health:15},result:'素晴らしい芸に心が癒された。隊商の士気が上がった。'},
+     {text:'無視して通り過ぎる',effect:{},result:'旅を続けた。'},
+   ]},
+  {icon:'🦂',title:'サソリの巣',desc:'キャンプ地でサソリが大量に出現！刺されると命に関わる。',
+   choices:[
+     {text:'急いで場所を移す',effect:{water:-10},result:'夜中に移動して水を消費したが、誰も刺されなかった。'},
+     {text:'その場で対処する',effect:{health:-20},result:'数人が刺されて体力を失ったが、薬草で治療した。'},
+   ]},
+  {icon:'📦',title:'倒れた隊商の荷物',desc:'道端に倒れた隊商の残骸を発見。荷物が散乱している。',
+   choices:[
+     {text:'荷物を回収する',effect:{randomGain:true},result:'交易品をいくつか手に入れた。'},
+     {text:'弔って先に進む',effect:{health:5},result:'旅の安全を祈り、心が穏やかになった。'},
+   ]},
+  {icon:'🌙',title:'満月の夜、匈奴の騎馬隊',desc:'匈奴の偵察隊がこちらに気づいた！',
+   choices:[
+     {text:'貢物を差し出す',effect:{gold:-60},result:'金60を差し出して見逃してもらった。'},
+     {text:'暗闇に隠れる',effect:{health:-10,water:-10},result:'荷物を放って隠れた。少し損害があったが無事だった。'},
+   ]},
+];
+
+const EVENTS_EN = [
+  {icon:'🌪️',title:'Sandstorm',desc:'A violent sandstorm strikes your caravan! Camels are panicking and water is scarce.',
+   choices:[
+     {text:'Push through the storm',effect:{water:-20,health:-15},result:'You pressed on through stinging sand. Water and health lost.'},
+     {text:'Set up tents and wait it out',effect:{water:-10,days:2},result:'Stranded for 2 days, but damage was minimal.'},
+   ]},
+  {icon:'🗡️',title:'Bandits',desc:'Armed bandits block your path!',
+   choices:[
+     {text:'Pay them off',effect:{gold:-80},result:'You paid 80 gold for safe passage.'},
+     {text:'Flee on camels',effect:{health:-20,camels:-1},result:'You escaped but lost a camel and health.'},
+     {text:'Negotiate—offer some goods',effect:{randomLoss:true},result:'You gave up some trade goods to pass peacefully.'},
+   ]},
+  {icon:'🏕️',title:'Caravanserai',desc:'A caravanserai offers hot meals and beds for weary travelers.',
+   choices:[
+     {text:'Stay the night (💰20)',effect:{gold:-20,health:25,water:15},result:'A good rest restored health and water.'},
+     {text:'Keep moving',effect:{},result:'You pressed on to save time.'},
+   ]},
+  {icon:'💀',title:'Desert Heat',desc:'Temperatures exceed 50°C in the scorching desert. Water consumption soars.',
+   choices:[
+     {text:'Travel at night',effect:{water:-15},result:'Moving at night saved some water.'},
+     {text:'Push through the heat',effect:{water:-30,health:-10},result:'The heat cost you dearly in water and health.'},
+   ]},
+  {icon:'🕌',title:'Friendly Merchants',desc:'A friendly merchant caravan shares trade intelligence.',
+   choices:[
+     {text:'Join them for a while',effect:{health:10,water:10},result:'Safety in numbers—shared water and improved morale.'},
+     {text:'Take the info and part ways',effect:{gold:30},result:'Market intelligence worth 30 gold for the next city.'},
+   ]},
+  {icon:'🏔️',title:'Mountain Pass',desc:'A treacherous mountain crossing at 4,000m on the Pamir Plateau.',
+   choices:[
+     {text:'Take the main pass (safer, longer)',effect:{water:-15,days:1},result:'Safe passage but cost water and time.'},
+     {text:'Try a shortcut',effect:{health:-25,camels:-1},result:'The shortcut cost a camel and much health.'},
+   ]},
+  {icon:'🐺',title:'Wolf Pack',desc:'Wolves circle your camp at night. The camels are restless.',
+   choices:[
+     {text:'Build large fires',effect:{water:-5},result:'Fires scared the wolves away, using some water for fuel.'},
+     {text:'Stand guard all night',effect:{health:-15},result:'No sleep, but the camels survived.'},
+   ]},
+  {icon:'🌊',title:'Oasis Found',desc:'A beautiful oasis appears in the desert! Date palms sway in the breeze.',
+   choices:[
+     {text:'Rest and recuperate',effect:{water:40,health:20},result:'Full water resupply and rest restored health.'},
+     {text:'Quick refill and go',effect:{water:25},result:'A quick water stop before moving on.'},
+   ]},
+  {icon:'🎭',title:'Traveling Performers',desc:'A troupe of Silk Road entertainers performs acrobatics and music.',
+   choices:[
+     {text:'Enjoy the show (💰15)',effect:{gold:-15,health:15},result:'Great entertainment lifted caravan morale.'},
+     {text:'Pass by',effect:{},result:'You continued on your way.'},
+   ]},
+  {icon:'🦂',title:'Scorpion Nest',desc:'Scorpions swarm your campsite! Their stings can be lethal.',
+   choices:[
+     {text:'Move camp immediately',effect:{water:-10},result:'Night relocation cost water but everyone is safe.'},
+     {text:'Deal with them on site',effect:{health:-20},result:'Some stings, treated with herbs. Health lost.'},
+   ]},
+  {icon:'📦',title:'Abandoned Cargo',desc:'Scattered cargo from a collapsed caravan lies by the road.',
+   choices:[
+     {text:'Scavenge the goods',effect:{randomGain:true},result:'You found some trade goods.'},
+     {text:'Pay respects and move on',effect:{health:5},result:'A prayer for safety calmed the caravan.'},
+   ]},
+  {icon:'🌙',title:'Xiongnu Scouts',desc:'Xiongnu horsemen have spotted your caravan under the full moon!',
+   choices:[
+     {text:'Offer tribute',effect:{gold:-60},result:'60 gold bought safe passage.'},
+     {text:'Hide in the darkness',effect:{health:-10,water:-10},result:'Abandoned some supplies while hiding. Minor losses.'},
+   ]},
+];
+
+let state = null;
+
+function newState(){
+  return {
+    gold: 500, water: 100, health: 100, camels: 5,
+    cityIdx: 0, days: 0, startGold: 500,
+    inventory: Object.fromEntries(GOODS.map(g => [g.id, 0])),
+    visitedCities: 1,
+  };
+}
+
+function startGame(){
+  state = newState();
+  document.getElementById('titleScreen').style.display = 'none';
+  document.getElementById('gameScreen').style.display = 'flex';
+  document.getElementById('endScreen').classList.remove('show');
+  renderMap();
+  openCityPanel(0);
+  updateTopBar();
+}
+
+function updateTopBar(){
+  document.getElementById('goldVal').textContent = state.gold;
+  document.getElementById('waterVal').textContent = state.water;
+  document.getElementById('healthVal').textContent = state.health;
+  document.getElementById('camelVal').textContent = state.camels;
+  const c = CITIES[state.cityIdx];
+  document.getElementById('cityLabel').textContent = lang==='ja' ? c.ja : c.en;
+  document.getElementById('journeyFill').style.width = (state.cityIdx / (CITIES.length-1) * 100) + '%';
+}
+
+function renderMap(){
+  const canvas = document.getElementById('mapCanvas');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * 2;
+  canvas.height = rect.height * 2;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.scale(2,2);
+  const w = W/2, h = H/2;
+
+  // Background gradient (desert tones)
+  const bg = ctx.createLinearGradient(0,0,w,0);
+  bg.addColorStop(0,'#2a1a08');
+  bg.addColorStop(0.3,'#3a2510');
+  bg.addColorStop(0.5,'#4a3018');
+  bg.addColorStop(0.7,'#3a2510');
+  bg.addColorStop(1,'#1a1408');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0,0,w,h);
+
+  // Subtle terrain texture
+  ctx.globalAlpha = 0.15;
+  for(let i=0;i<200;i++){
+    ctx.fillStyle = ['#5a4020','#6a5030','#4a3010'][i%3];
+    ctx.beginPath();
+    ctx.arc(Math.random()*w, Math.random()*h, Math.random()*3+1, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Mountain ranges (decorative)
+  ctx.fillStyle = '#2a1a0a';
+  drawMountains(ctx, w*0.25, h*0.15, 8, w*0.15, h*0.18);
+  drawMountains(ctx, w*0.55, h*0.12, 6, w*0.12, h*0.15);
+
+  // Draw route
+  ctx.strokeStyle = '#c4956a44';
+  ctx.lineWidth = 3;
+  ctx.setLineDash([8,6]);
+  ctx.beginPath();
+  for(let i=0;i<CITIES.length;i++){
+    const cx = CITIES[i].x * w, cy = CITIES[i].y * h;
+    if(i===0) ctx.moveTo(cx,cy); else ctx.lineTo(cx,cy);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Traveled route
+  if(state && state.cityIdx > 0){
+    ctx.strokeStyle = '#c4956a';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    for(let i=0;i<=state.cityIdx;i++){
+      const cx = CITIES[i].x * w, cy = CITIES[i].y * h;
+      if(i===0) ctx.moveTo(cx,cy); else ctx.lineTo(cx,cy);
+    }
+    ctx.stroke();
+  }
+
+  // Cities
+  for(let i=0;i<CITIES.length;i++){
+    const c = CITIES[i];
+    const cx = c.x * w, cy = c.y * h;
+    const visited = state && i <= state.cityIdx;
+    const current = state && i === state.cityIdx;
+
+    // City dot
+    ctx.beginPath();
+    ctx.arc(cx,cy,current?8:6,0,Math.PI*2);
+    ctx.fillStyle = current ? '#c4956a' : visited ? '#8a6a4a' : '#4a3a2a';
+    ctx.fill();
+    if(current){
+      ctx.strokeStyle = '#c4956a';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx,cy,12,0,Math.PI*2);
+      ctx.stroke();
+    }
+
+    // City name
+    ctx.font = `${current?'bold ':''}${Math.max(10,Math.min(13,w/50))}px sans-serif`;
+    ctx.fillStyle = visited ? '#d4a574' : '#6a5a4a';
+    ctx.textAlign = 'center';
+    const name = lang==='ja' ? c.ja : c.en;
+    ctx.fillText(name, cx, cy - 14);
+  }
+
+  // Camel icon at current city
+  if(state){
+    const cur = CITIES[state.cityIdx];
+    ctx.font = `${Math.max(16,Math.min(24,w/25))}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText('🐪', cur.x*w, cur.y*h + 28);
+  }
+
+  // Click handler
+  canvas.onclick = (e) => {
+    const r = canvas.getBoundingClientRect();
+    const mx = (e.clientX - r.left);
+    const my = (e.clientY - r.top);
+    for(let i=0;i<CITIES.length;i++){
+      const cx = CITIES[i].x * w, cy = CITIES[i].y * h;
+      if(Math.hypot(mx-cx, my-cy) < 24 && state && i <= state.cityIdx){
+        openCityPanel(i);
+        break;
+      }
+    }
+  };
+}
+
+function drawMountains(ctx, x, y, count, spread, maxH){
+  for(let i=0;i<count;i++){
+    const mx = x + (i - count/2) * (spread/count) * 1.5;
+    const mh = maxH * (0.5 + Math.random()*0.5);
+    ctx.beginPath();
+    ctx.moveTo(mx - spread/count, y + mh*0.3);
+    ctx.lineTo(mx, y - mh*0.7);
+    ctx.lineTo(mx + spread/count, y + mh*0.3);
+    ctx.fill();
+  }
+}
+
+function openCityPanel(idx){
+  const c = CITIES[idx];
+  const panel = document.getElementById('cityPanel');
+  document.getElementById('panelCityName').textContent = (lang==='ja'?c.ja:c.en) + ' — ' + (lang==='ja'?c.en:c.ja);
+  document.getElementById('panelCityDesc').textContent = lang==='ja' ? c.descJa : c.descEn;
+
+  const hist = document.getElementById('panelHistory');
+  hist.innerHTML = `<div class="hist-title">${t('histTitle')}</div>${lang==='ja'?c.histJa:c.histEn}`;
+
+  renderTradeGrid(idx);
+  renderSupplyShop(idx);
+
+  const btn = document.getElementById('travelBtn');
+  if(idx === state.cityIdx && idx < CITIES.length - 1){
+    btn.style.display = 'block';
+    btn.textContent = t('nextCity');
+    btn.disabled = state.water <= 0 || state.health <= 0 || state.camels <= 0;
+  } else if(idx === CITIES.length - 1 && idx === state.cityIdx){
+    btn.style.display = 'none';
+    setTimeout(() => showVictory(), 500);
+  } else {
+    btn.style.display = 'none';
+  }
+
+  panel.classList.add('show');
+}
+
+function closePanel(){ document.getElementById('cityPanel').classList.remove('show'); }
+
+function renderTradeGrid(cityIdx){
+  const grid = document.getElementById('tradeGrid');
+  const c = CITIES[cityIdx];
+  grid.innerHTML = '';
+  GOODS.forEach(g => {
+    const price = Math.round(g.base * (c.priceMod[g.id]||1));
+    const own = state.inventory[g.id];
+    const canBuy = state.gold >= price && state.camels * 10 > Object.values(state.inventory).reduce((a,b)=>a+b,0);
+    const canSell = own > 0;
+    const div = document.createElement('div');
+    div.className = 'trade-item';
+    div.innerHTML = `
+      <div class="t-name">${g.emoji} ${lang==='ja'?g.ja:g.en}</div>
+      <div class="t-price">${t('price')}💰${price}</div>
+      <div class="t-own">${t('own')}${own}</div>
+      <div class="trade-btns">
+        <button class="buy-btn" ${canBuy?'':'disabled'} onclick="buyGood('${g.id}',${price},${cityIdx})">${t('buy')}</button>
+        <button class="sell-btn" ${canSell?'':'disabled'} onclick="sellGood('${g.id}',${price},${cityIdx})">${t('sell')}</button>
+      </div>`;
+    grid.appendChild(div);
+  });
+}
+
+function renderSupplyShop(cityIdx){
+  const shop = document.getElementById('supplyShop');
+  const c = CITIES[cityIdx];
+  if(!c.supply || cityIdx !== state.cityIdx){
+    shop.innerHTML = '';
+    return;
+  }
+  shop.innerHTML = `
+    <div style="font-weight:700;margin:8px 0 6px;color:#c4956a;font-size:14px">${t('supplyTitle')}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="trade-btns" style="flex:1;padding:8px 12px;background:#2a3a2a;border:1px solid #3a5a3a;color:#8aba7a;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;min-width:120px"
+        onclick="buySupply('water')" ${state.gold>=30?'':'disabled'}>${t('waterCost')}</button>
+      <button class="trade-btns" style="flex:1;padding:8px 12px;background:#2a2a3a;border:1px solid #3a3a5a;color:#7a8aba;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;min-width:120px"
+        onclick="buySupply('camel')" ${state.gold>=80?'':'disabled'}>${t('camelCost')}</button>
+    </div>`;
+}
+
+function buyGood(id, price, cityIdx){
+  if(state.gold < price) return;
+  const totalItems = Object.values(state.inventory).reduce((a,b)=>a+b,0);
+  if(totalItems >= state.camels * 10) return;
+  state.gold -= price;
+  state.inventory[id]++;
+  updateTopBar();
+  renderTradeGrid(cityIdx);
+  renderSupplyShop(cityIdx);
+}
+
+function sellGood(id, price, cityIdx){
+  if(state.inventory[id] <= 0) return;
+  state.gold += price;
+  state.inventory[id]--;
+  updateTopBar();
+  renderTradeGrid(cityIdx);
+  renderSupplyShop(cityIdx);
+}
+
+function buySupply(type){
+  if(type === 'water' && state.gold >= 30){
+    state.gold -= 30;
+    state.water = Math.min(150, state.water + 50);
+  } else if(type === 'camel' && state.gold >= 80){
+    state.gold -= 80;
+    state.camels++;
+  }
+  updateTopBar();
+  renderSupplyShop(state.cityIdx);
+}
+
+function travelToNext(){
+  if(state.cityIdx >= CITIES.length - 1) return;
+  closePanel();
+
+  // Show travel overlay
+  const overlay = document.getElementById('travelOverlay');
+  const bar = document.getElementById('travelBar');
+  const text = document.getElementById('travelText');
+  overlay.classList.add('show');
+  text.textContent = t('traveling');
+  bar.style.width = '0%';
+
+  setTimeout(() => { bar.style.width = '100%'; }, 100);
+
+  // Travel costs
+  state.water -= 15 + Math.floor(Math.random()*10);
+  state.days += 8 + Math.floor(Math.random()*7);
+
+  setTimeout(() => {
+    overlay.classList.remove('show');
+    bar.style.width = '0%';
+
+    // Random event (80% chance)
+    if(Math.random() < 0.8){
+      triggerEvent();
+    } else {
+      arriveAtCity();
+    }
+  }, 2200);
+}
+
+function triggerEvent(){
+  const events = lang==='ja' ? EVENTS_JA : EVENTS_EN;
+  const ev = events[Math.floor(Math.random()*events.length)];
+
+  const overlay = document.getElementById('eventOverlay');
+  const card = document.getElementById('eventCard');
+
+  let choicesHtml = '<div class="ev-choices">';
+  ev.choices.forEach((ch, i) => {
+    choicesHtml += `<button class="ev-choice-btn" onclick="resolveEvent(${i})">${ch.text}</button>`;
+  });
+  choicesHtml += '</div>';
+
+  card.innerHTML = `
+    <div class="ev-icon">${ev.icon}</div>
+    <div class="ev-title">${ev.title}</div>
+    <div class="ev-desc">${ev.desc}</div>
+    ${choicesHtml}`;
+
+  overlay.classList.add('show');
+  card._event = ev;
+}
+
+function resolveEvent(choiceIdx){
+  const card = document.getElementById('eventCard');
+  const ev = card._event;
+  const choice = ev.choices[choiceIdx];
+  const eff = choice.effect;
+
+  if(eff.gold) state.gold += eff.gold;
+  if(eff.water) state.water += eff.water;
+  if(eff.health) state.health += eff.health;
+  if(eff.camels) state.camels += eff.camels;
+  if(eff.days) state.days += eff.days;
+
+  if(eff.randomLoss){
+    const owned = GOODS.filter(g => state.inventory[g.id] > 0);
+    if(owned.length > 0){
+      const g = owned[Math.floor(Math.random()*owned.length)];
+      const loss = Math.min(state.inventory[g.id], Math.ceil(Math.random()*3));
+      state.inventory[g.id] -= loss;
+    }
+  }
+  if(eff.randomGain){
+    const g = GOODS[Math.floor(Math.random()*GOODS.length)];
+    state.inventory[g.id] += Math.ceil(Math.random()*3);
+  }
+
+  state.water = Math.max(0, Math.min(150, state.water));
+  state.health = Math.max(0, Math.min(100, state.health));
+  state.camels = Math.max(0, state.camels);
+  state.gold = Math.max(0, state.gold);
+
+  // Determine effect class
+  let effClass = 'ev-neutral';
+  const net = (eff.gold||0) + (eff.health||0) + (eff.water||0) + (eff.camels||0)*20;
+  if(net > 0) effClass = 'ev-good';
+  else if(net < 0) effClass = 'ev-bad';
+
+  card.innerHTML = `
+    <div class="ev-icon">${ev.icon}</div>
+    <div class="ev-title">${ev.title}</div>
+    <div class="ev-effect ${effClass}">${choice.result}</div>
+    <button class="ev-btn" onclick="closeEventAndArrive()">${t('ok')}</button>`;
+
+  updateTopBar();
+}
+
+function closeEventAndArrive(){
+  document.getElementById('eventOverlay').classList.remove('show');
+  if(state.health <= 0 || state.camels <= 0){
+    showGameOver(state.health <= 0 ?
+      (lang==='ja'?'体力が尽きた':'Health depleted') :
+      (lang==='ja'?'ラクダを全て失った':'All camels lost'));
+    return;
+  }
+  if(state.water <= 0){
+    state.health -= 30;
+    if(state.health <= 0){
+      showGameOver(lang==='ja'?'水が尽き、砂漠で倒れた':'Ran out of water in the desert');
+      return;
+    }
+  }
+  arriveAtCity();
+}
+
+function arriveAtCity(){
+  state.cityIdx++;
+  state.visitedCities++;
+  updateTopBar();
+  renderMap();
+
+  if(state.cityIdx >= CITIES.length - 1){
+    openCityPanel(state.cityIdx);
+  } else {
+    openCityPanel(state.cityIdx);
+  }
+}
+
+function showVictory(){
+  closePanel();
+  const profit = state.gold - state.startGold;
+  const totalGoods = Object.values(state.inventory).reduce((a,b)=>a+b,0);
+  const goodsValue = GOODS.reduce((sum,g) => {
+    const romePrice = Math.round(g.base * (CITIES[CITIES.length-1].priceMod[g.id]||1));
+    return sum + state.inventory[g.id] * romePrice;
+  }, 0);
+  const totalWealth = state.gold + goodsValue;
+  let rankIdx = 0;
+  if(totalWealth >= 2000) rankIdx = 4;
+  else if(totalWealth >= 1200) rankIdx = 3;
+  else if(totalWealth >= 800) rankIdx = 2;
+  else if(totalWealth >= 500) rankIdx = 1;
+
+  const screen = document.getElementById('endScreen');
+  const card = document.getElementById('endCard');
+  card.innerHTML = `
+    <div class="end-icon">🏛️🐪🎉</div>
+    <h2>${t('victory')}</h2>
+    <p style="color:#a09080;margin-bottom:12px">${t('victoryDesc')}</p>
+    <div class="end-stats">
+      <strong>${t('daysLabel')}</strong>${state.days}${lang==='ja'?'日':' days'}<br>
+      <strong>${t('citiesLabel')}</strong>${state.visitedCities}<br>
+      <strong>${t('finalGold')}</strong>💰${state.gold}<br>
+      <strong>${lang==='ja'?'残り交易品価値: ':'Remaining goods value: '}</strong>💰${goodsValue}<br>
+      <strong>${t('profitLabel')}</strong>💰${totalWealth - state.startGold}<br>
+      <strong>${t('rank')}</strong>${t('ranks')[rankIdx]}
+    </div>
+    <button class="retry-btn" onclick="restartGame()">${t('retry')}</button>`;
+  screen.classList.add('show');
+  screen.style.display = 'flex';
+}
+
+function showGameOver(reason){
+  closePanel();
+  const screen = document.getElementById('endScreen');
+  const card = document.getElementById('endCard');
+  card.innerHTML = `
+    <div class="end-icon">💀🏜️</div>
+    <h2>${t('gameover')}</h2>
+    <div class="end-stats">
+      <strong>${t('goReason')}</strong>${reason}<br>
+      <strong>${t('goGold')}</strong>💰${state.gold}<br>
+      <strong>${t('goWater')}</strong>💧${state.water}<br>
+      <strong>${t('goHealth')}</strong>❤️${state.health}<br>
+      <strong>${t('goCamels')}</strong>🐪${state.camels}<br>
+      <strong>${t('daysLabel')}</strong>${state.days}${lang==='ja'?'日':' days'}<br>
+      <strong>${lang==='ja'?'到達地: ':'Reached: '}</strong>${lang==='ja'?CITIES[state.cityIdx].ja:CITIES[state.cityIdx].en}
+    </div>
+    <button class="retry-btn" onclick="restartGame()">${t('retry')}</button>`;
+  screen.classList.add('show');
+  screen.style.display = 'flex';
+}
+
+function restartGame(){
+  document.getElementById('endScreen').classList.remove('show');
+  document.getElementById('endScreen').style.display = 'none';
+  document.getElementById('gameScreen').style.display = 'none';
+  document.getElementById('titleScreen').style.display = 'flex';
+}
+
+function updateUI(){
+  document.getElementById('mainTitle').textContent = t('title');
+  document.getElementById('mainSub').textContent = t('sub');
+  document.getElementById('mainIntro').innerHTML = t('intro');
+  document.getElementById('startBtn').textContent = t('start');
+  if(state){
+    updateTopBar();
+    renderMap();
+    if(document.getElementById('cityPanel').classList.contains('show')){
+      openCityPanel(state.cityIdx);
+    }
+  }
+}
+
+window.addEventListener('resize', () => { if(state) renderMap(); });
+</script>
+</body>
+</html>
